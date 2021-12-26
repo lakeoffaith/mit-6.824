@@ -7,7 +7,7 @@ package main
 //
 
 import "fmt"
-import "../mr"
+import "mit-6.824/src/mr"
 import "plugin"
 import "os"
 import "log"
@@ -28,7 +28,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	mapf, reducef := loadPlugin(os.Args[1])
+	mapf, reducef := LoadPlugin(os.Args[1])
 
 	//
 	// read each input file,
@@ -88,7 +88,7 @@ func main() {
 
 //
 // load the application Map and Reduce functions
-// from a plugin file, e.g. ../mrapps/wc.so
+// from a plugin file, e.g. mit-6.824/src/mrapps/wc.so
 //
 func loadPlugin(filename string) (func(string, string) []mr.KeyValue, func(string, []string) string) {
 	p, err := plugin.Open(filename)

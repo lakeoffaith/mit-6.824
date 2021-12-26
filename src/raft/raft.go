@@ -25,8 +25,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"../labgob"
-	"../labrpc"
+	"mit-6.824/src/labgob"
+	"mit-6.824/src/labrpc"
 )
 
 //
@@ -41,7 +41,7 @@ import (
 // ApplyMsg, but set CommandValid to false for these other uses.
 //
 type ApplyMsg struct {
-	CommandValid bool	// true为log，false为snapshot
+	CommandValid bool // true为log，false为snapshot
 
 	// 向application层提交日志
 	Command      interface{}
@@ -49,9 +49,9 @@ type ApplyMsg struct {
 	CommandTerm  int
 
 	// 向application层安装快照
-	Snapshot []byte
+	Snapshot          []byte
 	LastIncludedIndex int
-	LastIncludedTerm int
+	LastIncludedTerm  int
 }
 
 // 日志项
@@ -80,11 +80,11 @@ type Raft struct {
 	// state a Raft server must maintain.
 
 	// 所有服务器，持久化状态（lab-2A不要求持久化）
-	currentTerm int        // 见过的最大任期
-	votedFor    int        // 记录在currentTerm任期投票给谁了
-	log         []LogEntry // 操作日志
-	lastIncludedIndex int 	// snapshot最后1个logEntry的index，没有snapshot则为0
-	lastIncludedTerm int // snapthost最后1个logEntry的term，没有snaphost则无意义
+	currentTerm       int        // 见过的最大任期
+	votedFor          int        // 记录在currentTerm任期投票给谁了
+	log               []LogEntry // 操作日志
+	lastIncludedIndex int        // snapshot最后1个logEntry的index，没有snapshot则为0
+	lastIncludedTerm  int        // snapthost最后1个logEntry的term，没有snaphost则无意义
 
 	// 所有服务器，易失状态
 	commitIndex int // 已知的最大已提交索引
@@ -100,7 +100,7 @@ type Raft struct {
 	lastActiveTime    time.Time // 上次活跃时间（刷新时机：收到leader心跳、给其他candidates投票、请求其他节点投票）
 	lastBroadcastTime time.Time // 作为leader，上次的广播时间
 
-	applyCh chan ApplyMsg	// 应用层的提交队列
+	applyCh chan ApplyMsg // 应用层的提交队列
 }
 
 // return currentTerm and whether this server
@@ -201,13 +201,13 @@ type AppendEntriesReply struct {
 }
 
 type InstallSnapshotArgs struct {
-	Term int
-	LeaderId int
+	Term              int
+	LeaderId          int
 	LastIncludedIndex int
-	LastIncludedTerm int
-	Offset int
-	Data []byte
-	Done bool
+	LastIncludedTerm  int
+	Offset            int
+	Data              []byte
+	Done              bool
 }
 
 type InstallSnapshotReply struct {
@@ -302,14 +302,14 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 	if args.PrevLogIndex < rf.lastIncludedIndex {
 		reply.ConflictIndex = 1
 		return
-	} else if args.PrevLogIndex == rf.lastIncludedIndex {	// prevLogIndex正好等于快照的最后一个log
-		if args.PrevLogTerm != rf.lastIncludedTerm {	// 冲突了，那么从index=1开始同步吧
+	} else if args.PrevLogIndex == rf.lastIncludedIndex { // prevLogIndex正好等于快照的最后一个log
+		if args.PrevLogTerm != rf.lastIncludedTerm { // 冲突了，那么从index=1开始同步吧
 			reply.ConflictIndex = 1
 			return
 		}
 		// 否则继续走后续的日志覆盖逻辑
-	} else {	// prevLogIndex在快照之后，那么进一步判定
-		if args.PrevLogIndex > rf.lastIndex() {	// prevLogIndex位置没有日志的case
+	} else { // prevLogIndex在快照之后，那么进一步判定
+		if args.PrevLogIndex > rf.lastIndex() { // prevLogIndex位置没有日志的case
 			reply.ConflictIndex = rf.lastIndex() + 1
 			return
 		}
@@ -331,11 +331,11 @@ func (rf *Raft) AppendEntries(args *AppendEntriesArgs, reply *AppendEntriesReply
 	for i, logEntry := range args.Entries {
 		index := args.PrevLogIndex + 1 + i
 		logPos := rf.index2LogPos(index)
-		if index > rf.lastIndex() {	// 超出现有日志长度，继续追加
+		if index > rf.lastIndex() { // 超出现有日志长度，继续追加
 			rf.log = append(rf.log, logEntry)
 		} else { // 重叠部分
 			if rf.log[logPos].Term != logEntry.Term {
-				rf.log = rf.log[:logPos]         // 删除当前以及后续所有log
+				rf.log = rf.log[:logPos]          // 删除当前以及后续所有log
 				rf.log = append(rf.log, logEntry) // 把新log加入进来
 			} // term一样啥也不用做，继续向后比对Log
 		}
@@ -383,17 +383,17 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapsho
 	// leader快照不如本地长，那么忽略这个快照
 	if args.LastIncludedIndex <= rf.lastIncludedIndex {
 		return
-	} else  {	// leader快照比本地快照长
-		if args.LastIncludedIndex < rf.lastIndex() {	// 快照外还有日志，判断是否需要截断
+	} else { // leader快照比本地快照长
+		if args.LastIncludedIndex < rf.lastIndex() { // 快照外还有日志，判断是否需要截断
 			if rf.log[rf.index2LogPos(args.LastIncludedIndex)].Term != args.LastIncludedTerm {
-				rf.log = make([]LogEntry, 0)	// term冲突，扔掉快照外的所有日志
-			} else {	// term没冲突，保留后续日志
-				leftLog := make([]LogEntry, rf.lastIndex() - args.LastIncludedIndex)
+				rf.log = make([]LogEntry, 0) // term冲突，扔掉快照外的所有日志
+			} else { // term没冲突，保留后续日志
+				leftLog := make([]LogEntry, rf.lastIndex()-args.LastIncludedIndex)
 				copy(leftLog, rf.log[rf.index2LogPos(args.LastIncludedIndex)+1:])
 				rf.log = leftLog
 			}
 		} else {
-			rf.log = make([]LogEntry, 0)	// 快照比本地日志长，日志就清空了
+			rf.log = make([]LogEntry, 0) // 快照比本地日志长，日志就清空了
 		}
 	}
 	// 更新快照位置
@@ -429,7 +429,7 @@ func (rf *Raft) InstallSnapshot(args *InstallSnapshotArgs, reply *InstallSnapsho
 // handler function on the server side does not return.  Thus there
 // is no need to implement your own timeouts around Call().
 //
-// look at the comments in ../labrpc/labrpc.go for more details.
+// look at the comments in mit-6.824/src/labrpc/labrpc.go for more details.
 //
 // if you're having trouble getting RPC to work, check that you've
 // capitalized all field names in structs passed over RPC, and
@@ -707,7 +707,7 @@ func (rf *Raft) doAppendEntries(peerId int) {
 			if reply.Success { // 同步日志成功
 				rf.nextIndex[peerId] = args.PrevLogIndex + len(args.Entries) + 1
 				rf.matchIndex[peerId] = rf.nextIndex[peerId] - 1
-				rf.updateCommitIndex()	// 更新commitIndex
+				rf.updateCommitIndex() // 更新commitIndex
 			} else {
 				// 回退优化，参考：https://thesquareplanet.com/blog/students-guide-to-raft/#an-aside-on-optimizations
 				nextIndexBefore := rf.nextIndex[peerId] // 仅为打印log
@@ -768,9 +768,9 @@ func (rf *Raft) doInstallSnapshot(peerId int) {
 				rf.persist()
 				return
 			}
-			rf.nextIndex[peerId] = rf.lastIndex() + 1	// 重新从末尾同步log（未经优化，但够用）
-			rf.matchIndex[peerId] = args.LastIncludedIndex	// 已同步到的位置（未经优化，但够用）
-			rf.updateCommitIndex()	// 更新commitIndex
+			rf.nextIndex[peerId] = rf.lastIndex() + 1      // 重新从末尾同步log（未经优化，但够用）
+			rf.matchIndex[peerId] = args.LastIncludedIndex // 已同步到的位置（未经优化，但够用）
+			rf.updateCommitIndex()                         // 更新commitIndex
 			DPrintf("RaftNode[%d] doInstallSnapshot ends, leaderId[%d] peerId[%d] nextIndex[%d] matchIndex[%d] commitIndex[%d]\n", rf.me, rf.leaderId, peerId, rf.nextIndex[peerId],
 				rf.matchIndex[peerId], rf.commitIndex)
 		}
@@ -807,7 +807,7 @@ func (rf *Raft) appendEntriesLoop() {
 				// 如果nextIndex在leader的snapshot内，那么直接同步snapshot
 				if rf.nextIndex[peerId] <= rf.lastIncludedIndex {
 					rf.doInstallSnapshot(peerId)
-				} else {	// 否则同步日志
+				} else { // 否则同步日志
 					rf.doAppendEntries(peerId)
 				}
 			}
@@ -835,7 +835,7 @@ func (rf *Raft) applyLogLoop() {
 					CommandIndex: rf.lastApplied,
 					CommandTerm:  rf.log[appliedIndex].Term,
 				}
-				rf.applyCh <- appliedMsg	// 引入snapshot后，这里必须在锁内投递了，否则会和snapshot的交错产生bug
+				rf.applyCh <- appliedMsg // 引入snapshot后，这里必须在锁内投递了，否则会和snapshot的交错产生bug
 				DPrintf("RaftNode[%d] applyLog, currentTerm[%d] lastApplied[%d] commitIndex[%d]", rf.me, rf.currentTerm, rf.lastApplied, rf.commitIndex)
 				noMore = false
 			}
@@ -850,16 +850,16 @@ func (rf *Raft) installSnapshotToApplication() {
 
 	// 同步给application层的快照
 	applyMsg = &ApplyMsg{
-		CommandValid: false,
-		Snapshot: rf.persister.ReadSnapshot(),
+		CommandValid:      false,
+		Snapshot:          rf.persister.ReadSnapshot(),
 		LastIncludedIndex: rf.lastIncludedIndex,
-		LastIncludedTerm: rf.lastIncludedTerm,
+		LastIncludedTerm:  rf.lastIncludedTerm,
 	}
 	// 快照部分就已经提交给application了，所以后续applyLoop提交日志后移
 	rf.lastApplied = rf.lastIncludedIndex
 
 	DPrintf("RaftNode[%d] installSnapshotToApplication, snapshotSize[%d] lastIncludedIndex[%d] lastIncludedTerm[%d]",
-		rf.me,  len(applyMsg.Snapshot), applyMsg.LastIncludedIndex, applyMsg.LastIncludedTerm)
+		rf.me, len(applyMsg.Snapshot), applyMsg.LastIncludedIndex, applyMsg.LastIncludedTerm)
 	rf.applyCh <- *applyMsg
 	return
 }
@@ -871,7 +871,7 @@ func (rf *Raft) lastIndex() int {
 
 // 最后的term
 func (rf *Raft) lastTerm() (lastLogTerm int) {
-	lastLogTerm = rf.lastIncludedTerm	// for snapshot
+	lastLogTerm = rf.lastIncludedTerm // for snapshot
 	if len(rf.log) != 0 {
 		lastLogTerm = rf.log[len(rf.log)-1].Term
 	}
@@ -905,7 +905,7 @@ func (rf *Raft) TakeSnapshot(snapshot []byte, lastIncludedIndex int) {
 
 	// 快照的当前元信息
 	DPrintf("RafeNode[%d] TakeSnapshot begins, IsLeader[%v] snapshotLastIndex[%d] lastIncludedIndex[%d] lastIncludedTerm[%d]",
-		rf.me, rf.leaderId==rf.me, lastIncludedIndex, rf.lastIncludedIndex, rf.lastIncludedTerm)
+		rf.me, rf.leaderId == rf.me, lastIncludedIndex, rf.lastIncludedIndex, rf.lastIncludedTerm)
 
 	// 要压缩的日志长度
 	compactLogLen := lastIncludedIndex - rf.lastIncludedIndex
@@ -915,7 +915,7 @@ func (rf *Raft) TakeSnapshot(snapshot []byte, lastIncludedIndex int) {
 	rf.lastIncludedIndex = lastIncludedIndex
 
 	// 压缩日志
-	afterLog := make([]LogEntry, len(rf.log) - compactLogLen)
+	afterLog := make([]LogEntry, len(rf.log)-compactLogLen)
 	copy(afterLog, rf.log[compactLogLen:])
 	rf.log = afterLog
 
@@ -923,9 +923,8 @@ func (rf *Raft) TakeSnapshot(snapshot []byte, lastIncludedIndex int) {
 	rf.persister.SaveStateAndSnapshot(rf.raftStateForPersist(), snapshot)
 
 	DPrintf("RafeNode[%d] TakeSnapshot ends, IsLeader[%v] snapshotLastIndex[%d] lastIncludedIndex[%d] lastIncludedTerm[%d]",
-		rf.me, rf.leaderId==rf.me, lastIncludedIndex, rf.lastIncludedIndex, rf.lastIncludedTerm)
+		rf.me, rf.leaderId == rf.me, lastIncludedIndex, rf.lastIncludedIndex, rf.lastIncludedTerm)
 }
-
 
 //
 // the service or tester wants to create a Raft server. the ports
@@ -973,4 +972,3 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	return rf
 }
-

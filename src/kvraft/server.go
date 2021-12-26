@@ -7,9 +7,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"../labgob"
-	"../labrpc"
-	"../raft"
+	"mit-6.824/src/labgob"
+	"mit-6.824/src/labrpc"
+	"mit-6.824/src/raft"
 )
 
 const Debug = 0
@@ -219,7 +219,7 @@ func (kv *KVServer) applyLoop() {
 				func() {
 					kv.mu.Lock()
 					defer kv.mu.Unlock()
-					if len(msg.Snapshot) == 0 {	// 空快照，清空数据
+					if len(msg.Snapshot) == 0 { // 空快照，清空数据
 						kv.kvStore = make(map[string]string)
 						kv.seqMap = make(map[int64]int64)
 					} else {
@@ -296,13 +296,13 @@ func (kv *KVServer) snapshotLoop() {
 		// 锁内dump snapshot
 		func() {
 			// 如果raft log超过了maxraftstate大小，那么对kvStore快照下来
-			if kv.maxraftstate != -1 && kv.rf.ExceedLogSize(kv.maxraftstate) {	// 这里调用ExceedLogSize不要加kv锁，否则会死锁
+			if kv.maxraftstate != -1 && kv.rf.ExceedLogSize(kv.maxraftstate) { // 这里调用ExceedLogSize不要加kv锁，否则会死锁
 				// 锁内快照，离开锁通知raft处理
 				kv.mu.Lock()
 				w := new(bytes.Buffer)
 				e := labgob.NewEncoder(w)
-				e.Encode(kv.kvStore)	// kv键值对
-				e.Encode(kv.seqMap)	// 当前各客户端最大请求编号，也要随着snapshot走
+				e.Encode(kv.kvStore) // kv键值对
+				e.Encode(kv.seqMap)  // 当前各客户端最大请求编号，也要随着snapshot走
 				snapshot = w.Bytes()
 				lastIncludedIndex = kv.lastAppliedIndex
 				DPrintf("KVServer[%d] KVServer dump snapshot, snapshotSize[%d] lastAppliedIndex[%d]", kv.me, len(snapshot), kv.lastAppliedIndex)
@@ -343,7 +343,7 @@ func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persiste
 
 	// You may need initialization code here.
 
-	kv.applyCh = make(chan raft.ApplyMsg, 1)	// 至少1个容量，启动后初始化snapshot用
+	kv.applyCh = make(chan raft.ApplyMsg, 1) // 至少1个容量，启动后初始化snapshot用
 	kv.rf = raft.Make(servers, me, persister, kv.applyCh)
 
 	// You may need initialization code here.
@@ -352,7 +352,7 @@ func StartKVServer(servers []*labrpc.ClientEnd, me int, persister *raft.Persiste
 	kv.seqMap = make(map[int64]int64)
 	kv.lastAppliedIndex = 0
 
-	DPrintf("KVServer[%d] KVServer starts all Loops, maxraftstate[%d]", kv.me,  kv.maxraftstate)
+	DPrintf("KVServer[%d] KVServer starts all Loops, maxraftstate[%d]", kv.me, kv.maxraftstate)
 
 	go kv.applyLoop()
 	go kv.snapshotLoop()

@@ -1,7 +1,7 @@
 package kvraft
 
 import (
-	"../labrpc"
+	"mit-6.824/src/labrpc"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -9,14 +9,13 @@ import (
 import "crypto/rand"
 import "math/big"
 
-
 type Clerk struct {
-	mu sync.Mutex
+	mu      sync.Mutex
 	servers []*labrpc.ClientEnd
 	// You will have to modify this struct.
 	// 只需要确保clientId每次重启不重复，那么clientId+seqId就是安全的
-	clientId int64	// 客户端唯一标识
-	seqId int64	// 该客户端单调递增的请求id
+	clientId int64 // 客户端唯一标识
+	seqId    int64 // 该客户端单调递增的请求id
 	leaderId int
 }
 
@@ -50,9 +49,9 @@ func MakeClerk(servers []*labrpc.ClientEnd) *Clerk {
 func (ck *Clerk) Get(key string) string {
 	// You will have to modify this function.
 	args := GetArgs{
-		Key: key,
+		Key:      key,
 		ClientId: ck.clientId,
-		SeqId: atomic.AddInt64(&ck.seqId, 1),
+		SeqId:    atomic.AddInt64(&ck.seqId, 1),
 	}
 
 	DPrintf("Client[%d] Get starts, Key=%s ", ck.clientId, key)
@@ -61,10 +60,10 @@ func (ck *Clerk) Get(key string) string {
 	for {
 		reply := GetReply{}
 		if ck.servers[leaderId].Call("KVServer.Get", &args, &reply) {
-			if reply.Err == OK {	// 命中
+			if reply.Err == OK { // 命中
 				return reply.Value
-			} else if reply.Err == ErrNoKey {	// 不存在
-				return "";
+			} else if reply.Err == ErrNoKey { // 不存在
+				return ""
 			}
 		}
 		leaderId = ck.changeLeader()
@@ -85,11 +84,11 @@ func (ck *Clerk) Get(key string) string {
 func (ck *Clerk) PutAppend(key string, value string, op string) {
 	// You will have to modify this function.
 	args := PutAppendArgs{
-		Key: key,
-		Value: value,
-		Op: op,
+		Key:      key,
+		Value:    value,
+		Op:       op,
 		ClientId: ck.clientId,
-		SeqId: atomic.AddInt64(&ck.seqId, 1),
+		SeqId:    atomic.AddInt64(&ck.seqId, 1),
 	}
 
 	DPrintf("Client[%d] PutAppend, Key=%s Value=%s", ck.clientId, key, value)
@@ -98,7 +97,7 @@ func (ck *Clerk) PutAppend(key string, value string, op string) {
 	for {
 		reply := PutAppendReply{}
 		if ck.servers[leaderId].Call("KVServer.PutAppend", &args, &reply) {
-			if reply.Err == OK {	// 成功
+			if reply.Err == OK { // 成功
 				break
 			}
 		}

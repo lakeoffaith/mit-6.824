@@ -4,7 +4,7 @@ package main
 // start a diskvd server. it's a member of some replica
 // group, which has other members, and it needs to know
 // how to talk to the members of the shardmaster service.
-// used by ../diskv/test_test.go
+// used by mit-6.824/src/diskv/test_test.go
 //
 // arguments:
 //   -g groupid
