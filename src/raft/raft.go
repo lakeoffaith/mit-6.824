@@ -936,7 +936,7 @@ func (rf *Raft) TakeSnapshot(snapshot []byte, lastIncludedIndex int) {
 // tester or service expects Raft to send ApplyMsg messages.
 // Make() must return quickly, so it should start goroutines
 // for any long-running work.
-//
+//创建 Raft对象
 func Make(peers []*labrpc.ClientEnd, me int,
 	persister *Persister, applyCh chan ApplyMsg) *Raft {
 	rf := &Raft{}
@@ -962,8 +962,9 @@ func Make(peers []*labrpc.ClientEnd, me int,
 	DPrintf("RaftNode[%d] Make again", rf.me)
 
 	// election逻辑
+	//创建选举线程
 	go rf.electionLoop()
-	// leader逻辑
+	// leader逻辑 同步日志
 	go rf.appendEntriesLoop()
 	// apply逻辑
 	go rf.applyLogLoop()
